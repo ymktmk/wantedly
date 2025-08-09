@@ -75,7 +75,7 @@ class PostgreSQLCompanyDatabase:
                     SELECT id, company, code, prefecture, date, homepage_url, contact_url, description
                     FROM companies
                     WHERE homepage_url IS NULL AND contact_url IS NULL AND description IS NULL
-                    ORDER BY id
+                    ORDER BY RANDOM()
                 """
                 
                 if limit:
