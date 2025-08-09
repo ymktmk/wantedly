@@ -72,6 +72,10 @@ playwright install chromium
 echo "Playwright依存関係をインストール中..."
 playwright install-deps
 
-# 11. Pythonファイルの実行
+# 11. git clone
+echo "git cloneを実行中..."
+git clone https://github.com/ymktmk/wantedly.git
+
+# 12. Pythonファイルの実行
 echo "Pythonファイルを実行中..."
 python3 wantedly/company/main.py
