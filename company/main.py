@@ -70,68 +70,54 @@ def process_company(company_data, index, total, db):
         else:
             print("❌ データベースの更新に失敗しました")
     else:
-        print("ℹ️  更新する情報が見つからなかったため、データベースは更新されませんでした")
+        # 次回以降に同じレコードが再度選ばれ続けるのを防ぐため、空文字でマーク
+        marked = db.update_company_info(company_id=company_id, homepage_url="")
+        if marked:
+            print("ℹ️  情報が見つからなかったため、homepage_urlを空文字でマークしました")
+        else:
+            print("ℹ️  情報が見つからず、マーク更新にも失敗しました")
 
 if __name__ == "__main__":
     try:
         # SupabaseのPostgreSQLデータベースに接続
         db = create_postgresql_database_with_url()
-        
-        # homepage_urlが空の会社数を取得
-        total_companies = db.get_companies_without_homepage_count()
-        print(f"homepage_urlが空の会社が{total_companies}件見つかりました")
-        
-        if total_companies == 0:
-            print("処理対象の会社がありません。終了します。")
-            exit()
-        
-        # 取得開始位置の設定
-        start_index = input(f"開始位置を入力してください（1-{total_companies}、最初から開始する場合はEnter）: ").strip()
-        if start_index and start_index.isdigit():
-            start_index = max(1, min(int(start_index), total_companies)) - 1  # 0ベースのインデックスに変換
-            print(f"{start_index + 1}番目の会社から開始します")
-        else:
-            start_index = 0
-            print("最初の会社から開始します")
-        
-        # 取得件数の設定
-        remaining_companies = total_companies - start_index
-        max_companies = input(f"処理する会社数を入力してください（1-{remaining_companies}、残り全て処理する場合はEnter）: ").strip()
-        if max_companies and max_companies.isdigit():
-            max_companies = min(int(max_companies), remaining_companies)
-            print(f"{start_index + 1}番目から{max_companies}件の会社を処理します")
-        else:
-            max_companies = remaining_companies
-            print(f"{start_index + 1}番目から残り全ての会社を処理します")
-        
-        print("homepage_urlが空の会社のみを対象に、データベースの特定フィールド（homepage_url、contact_url、description）を更新します")
-        
-        input("処理を開始します。Enterキーを押してください...")
-        
-        # homepage_urlが空の会社データを取得
-        companies = db.get_companies_without_homepage(limit=max_companies, offset=start_index)
-        
-        # 各会社を順番に処理
-        for i, company_data in enumerate(companies):
+
+        # print("homepage_urlが空の会社を、1件ずつ取得して処理します。")
+        # input("処理を開始します。Enterキーを押してください...")
+
+        processed_count = 0
+
+        while True:
+            # 1件だけ取得（毎回クエリ）
+            companies = db.get_companies_without_homepage(limit=1, offset=0)
+
+            if not companies:
+                if processed_count == 0:
+                    print("処理対象の会社がありません。終了します。")
+                else:
+                    print("\n🎉 処理完了！データベースの更新が完了しました。")
+                break
+
+            company_data = companies[0]
+
             try:
-                process_company(company_data, i+1, len(companies), db)
-                
+                # 合計件数は不定のためハイフン表示
+                process_company(company_data, processed_count + 1, '-', db)
+                processed_count += 1
+
                 # 各会社の処理後に少し待機（API制限回避）
-                if i < len(companies) - 1:  # 最後の会社でない場合
-                    wait_time = random.uniform(2, 4)
-                    print(f"\n⏰ {wait_time:.1f}秒待機中...")
-                    time.sleep(wait_time)
-                    
+                wait_time = random.uniform(2, 4)
+                print(f"\n⏰ {wait_time:.1f}秒待機中...")
+                time.sleep(wait_time)
+
             except KeyboardInterrupt:
-                print(f"\n\n⚠️  処理が中断されました。{i+1}件目まで処理済み。")
+                print(f"\n\n⚠️  処理が中断されました。{processed_count}件目まで処理済み。")
                 break
             except Exception as e:
                 print(f"\n❌ エラーが発生しました: {e}")
                 print("次の会社の処理を続行します...")
                 continue
-        
-        print(f"\n🎉 処理完了！データベースの更新が完了しました。")
-        
+
     except Exception as e:
         print(f"❌ データベース接続エラー: {e}")
         print("接続パラメータを確認してください")

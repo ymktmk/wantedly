@@ -71,3 +71,7 @@ playwright install chromium
 # 10. Playwrightの依存関係をインストール
 echo "Playwright依存関係をインストール中..."
 playwright install-deps
+
+# 11. Pythonファイルの実行
+echo "Pythonファイルを実行中..."
+python3 wantedly/company/main.py

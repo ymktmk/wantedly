@@ -74,7 +74,7 @@ class PostgreSQLCompanyDatabase:
                 query = """
                     SELECT id, company, code, prefecture, date, homepage_url, contact_url, description
                     FROM companies
-                    WHERE homepage_url IS NULL
+                    WHERE homepage_url IS NULL AND contact_url IS NULL AND description IS NULL
                     ORDER BY id
                 """
                 
@@ -92,23 +92,6 @@ class PostgreSQLCompanyDatabase:
         except psycopg2.Error as e:
             print(f"❌ データベース取得エラー: {e}")
             return []
-    
-    def get_companies_without_homepage_count(self) -> int:
-        """homepage_urlが空の会社数を取得"""
-        if not self.connection:
-            raise Exception("データベースに接続されていません")
-        
-        try:
-            with self.connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT COUNT(*) FROM companies 
-                    WHERE homepage_url IS NULL
-                """)
-                count = cursor.fetchone()[0]
-                return count
-        except psycopg2.Error as e:
-            print(f"❌ カウント取得エラー: {e}")
-            return 0
     
     def update_company_info(self, company_id: int, homepage_url: str = None, 
                            contact_url: str = None, description: str = None) -> bool:
