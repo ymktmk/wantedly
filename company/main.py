@@ -19,9 +19,9 @@ def process_company(company_data, index, total, db):
     
     # 公式ホームページ、お問い合わせページ、業界情報を取得
     homepage_results = find_company_website(company_name)
-    time.sleep(0.5)  # リクエスト間隔を開ける
+    time.sleep(random.uniform(0.5, 1))  # リクエスト間隔を開ける
     contact_results = find_company_contact(company_name)
-    time.sleep(0.5)  # リクエスト間隔を開ける
+    time.sleep(random.uniform(0.5, 1))  # リクエスト間隔を開ける
     industry_results = find_company_industry(company_name)
     
     # 公式ホームページの表示・保存
