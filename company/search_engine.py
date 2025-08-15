@@ -2,9 +2,89 @@ from playwright.sync_api import sync_playwright
 import urllib.parse
 import time
 import random
+import os
+
+def _serpapi_search(query):
+    """SerpAPI を使って Google 検索結果を取得（環境変数 SERPAPI_API_KEY が必要）"""
+    api_key = os.getenv('SERPAPI_API_KEY')
+    if not api_key:
+        return []
+    try:
+        # requests はローカルimport（未インストール環境でも既存フォールバックを使えるように）
+        import requests  # type: ignore
+        params = {
+            'engine': 'google',
+            'q': query,
+            'hl': 'ja',
+            'gl': 'jp',
+            'num': 10,
+            'api_key': api_key,
+        }
+        resp = requests.get('https://serpapi.com/search.json', params=params, timeout=20)
+        if resp.status_code != 200:
+            print(f"⚠️ SerpAPI エラー: {resp.status_code} {resp.text[:200]}")
+            return []
+        data = resp.json()
+        organic = data.get('organic_results') or []
+        results = []
+        for item in organic:
+            title = item.get('title')
+            url = item.get('link')
+            desc = item.get('snippet') or ''
+            if title and url:
+                results.append({'title': title, 'url': url, 'description': desc})
+        return results
+    except Exception as e:
+        print(f"⚠️ SerpAPI 呼び出し失敗: {e}")
+        return []
+
+def _google_cse_search(query):
+    """Google Custom Search JSON API を使って検索結果を取得（環境変数 GOOGLE_CSE_API_KEY, GOOGLE_CSE_ENGINE_ID が必要）"""
+    api_key = os.getenv('GOOGLE_CSE_API_KEY')
+    engine_id = os.getenv('GOOGLE_CSE_ENGINE_ID')
+    if not api_key or not engine_id:
+        return []
+    try:
+        import requests  # type: ignore
+        params = {
+            'key': api_key,
+            'cx': engine_id,
+            'q': query,
+            'hl': 'ja',
+            'num': 10,
+            'safe': 'off',
+            'lr': 'lang_ja',
+        }
+        resp = requests.get('https://www.googleapis.com/customsearch/v1', params=params, timeout=20)
+        if resp.status_code != 200:
+            print(f"⚠️ Google CSE API エラー: {resp.status_code} {resp.text[:200]}")
+            return []
+        data = resp.json()
+        items = data.get('items') or []
+        results = []
+        for item in items:
+            title = item.get('title')
+            url = item.get('link')
+            desc = item.get('snippet') or ''
+            if title and url:
+                results.append({'title': title, 'url': url, 'description': desc})
+        return results
+    except Exception as e:
+        print(f"⚠️ Google CSE API 呼び出し失敗: {e}")
+        return []
 
 def google_search(query):
-    """Google検索を実行して結果を取得"""
+    """Google検索を実行して結果を取得（優先順: CSE → SerpAPI → Playwright）"""
+    # 1) CSE（最優先）
+    cse_results = _google_cse_search(query)
+    if cse_results:
+        return cse_results
+
+    # 2) SerpAPI
+    serp_results = _serpapi_search(query)
+    if serp_results:
+        return serp_results
+
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
