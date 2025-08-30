@@ -2,93 +2,132 @@ from playwright.sync_api import sync_playwright
 import urllib.parse
 import time
 import random
-import os
-
-def _serpapi_search(query):
-    """SerpAPI を使って Google 検索結果を取得（環境変数 SERPAPI_API_KEY が必要）"""
-    api_key = os.getenv('SERPAPI_API_KEY')
-    if not api_key:
-        return []
-    try:
-        # requests はローカルimport（未インストール環境でも既存フォールバックを使えるように）
-        import requests  # type: ignore
-        params = {
-            'engine': 'google',
-            'q': query,
-            'hl': 'ja',
-            'gl': 'jp',
-            'num': 10,
-            'api_key': api_key,
-        }
-        resp = requests.get('https://serpapi.com/search.json', params=params, timeout=20)
-        if resp.status_code != 200:
-            print(f"⚠️ SerpAPI エラー: {resp.status_code} {resp.text[:200]}")
-            return []
-        data = resp.json()
-        organic = data.get('organic_results') or []
-        results = []
-        for item in organic:
-            title = item.get('title')
-            url = item.get('link')
-            desc = item.get('snippet') or ''
-            if title and url:
-                results.append({'title': title, 'url': url, 'description': desc})
-        return results
-    except Exception as e:
-        print(f"⚠️ SerpAPI 呼び出し失敗: {e}")
-        return []
-
-def _google_cse_search(query):
-    """Google Custom Search JSON API を使って検索結果を取得（環境変数 GOOGLE_CSE_API_KEY, GOOGLE_CSE_ENGINE_ID が必要）"""
-    api_key = os.getenv('GOOGLE_CSE_API_KEY')
-    engine_id = os.getenv('GOOGLE_CSE_ENGINE_ID')
-    if not api_key or not engine_id:
-        return []
-    try:
-        import requests  # type: ignore
-        params = {
-            'key': api_key,
-            'cx': engine_id,
-            'q': query,
-            'hl': 'ja',
-            'num': 10,
-            'safe': 'off',
-            'lr': 'lang_ja',
-        }
-        resp = requests.get('https://www.googleapis.com/customsearch/v1', params=params, timeout=20)
-        if resp.status_code != 200:
-            print(f"⚠️ Google CSE API エラー: {resp.status_code} {resp.text[:200]}")
-            return []
-        data = resp.json()
-        items = data.get('items') or []
-        results = []
-        for item in items:
-            title = item.get('title')
-            url = item.get('link')
-            desc = item.get('snippet') or ''
-            if title and url:
-                results.append({'title': title, 'url': url, 'description': desc})
-        return results
-    except Exception as e:
-        print(f"⚠️ Google CSE API 呼び出し失敗: {e}")
-        return []
 
 def google_search(query):
-    """Google検索を実行して結果を取得（優先順: CSE → SerpAPI → Playwright）"""
-    # 1) CSE（最優先）
-    cse_results = _google_cse_search(query)
-    if cse_results:
-        return cse_results
+    """Google検索を実行して結果を取得"""
 
-    # 2) SerpAPI
-    serp_results = _serpapi_search(query)
-    if serp_results:
-        return serp_results
+    # プロキシリスト
+    proxy_list = [
+        "45.87.51.66:6626",
+        "64.137.58.171:6417",
+        "82.29.214.96:6947",
+        "206.41.169.40:5620",
+        "82.24.249.182:6019",
+        "148.135.148.242:6235",
+        "23.109.232.239:6159",
+        "154.203.48.121:5917",
+        "172.102.223.180:5691",
+        "38.154.227.176:5877",
+        "45.38.84.86:7022",
+        "23.27.210.2:6372",
+        "45.43.87.51:7800",
+        "45.251.61.178:6896",
+        "82.29.235.90:7942",
+        "104.239.39.194:6123",
+        "31.58.151.64:6055",
+        "92.112.170.61:6030",
+        "92.112.238.171:7050",
+        "82.22.245.232:6056",
+        "94.46.206.161:6934",
+        "148.135.179.114:6173",
+        "185.135.10.34:5548",
+        "198.46.246.19:6643",
+        "46.203.96.48:6172",
+        "45.92.77.61:6083",
+        "45.117.55.252:6898",
+        "173.211.8.84:6196",
+        "179.61.166.214:6637",
+        "69.58.9.27:7097",
+        "104.253.55.169:5599",
+        "92.112.236.47:6479",
+        "92.113.231.63:7148",
+        "50.114.15.143:6128",
+        "91.123.10.196:6738",
+        "107.181.141.93:6490",
+        "64.137.89.210:6283",
+        "89.249.194.251:6650",
+        "185.171.254.211:6243",
+        "82.23.228.197:6519",
+        "91.223.126.177:6789",
+        "92.112.228.193:6274",
+        "173.211.8.241:6353",
+        "50.114.99.186:6927",
+        "142.111.113.182:6543",
+        "82.22.230.54:7392",
+        "82.24.242.186:8005",
+        "145.223.41.95:6366",
+        "104.168.118.119:6075",
+        "104.253.50.109:6546",
+        "194.38.26.206:7267",
+        "23.94.138.162:6436",
+        "82.29.237.184:7993",
+        "92.112.137.67:6010",
+        "92.112.171.113:6081",
+        "184.174.56.112:5124",
+        "92.112.172.22:6294",
+        "38.153.148.42:5313",
+        "216.173.104.199:6336",
+        "82.25.242.239:7558",
+        "154.13.221.19:6005",
+        "198.37.116.49:6008",
+        "23.236.216.235:6265",
+        "45.39.15.169:6599",
+        "154.30.242.98:9492",
+        "179.61.166.9:6432",
+        "45.41.169.150:6811",
+        "23.236.247.169:8201",
+        "86.38.236.109:6393",
+        "104.253.77.12:5434",
+        "216.173.104.3:6140",
+        "82.29.233.166:8023",
+        "23.27.75.203:6283",
+        "82.22.215.54:7385",
+        "185.101.253.244:5804",
+        "46.202.67.134:6130",
+        "145.223.57.117:6150",
+        "92.112.85.74:5809",
+        "46.202.227.95:6089",
+        "107.181.148.212:6072",
+        "145.223.54.122:6087",
+        "23.27.209.254:6273",
+        "50.114.84.93:7332",
+        "140.99.203.167:6044",
+        "104.143.244.32:5980",
+        "107.181.132.139:6117",
+        "23.27.184.10:5611",
+        "45.43.191.37:5998",
+        "148.135.144.138:5634",
+        "154.203.49.77:5373",
+        "45.38.101.119:6052",
+        "82.24.225.223:8064",
+        "104.239.88.19:5639",
+        "45.38.111.17:5932",
+        "85.198.47.231:6499",
+        "82.24.221.7:5858",
+        "104.168.118.78:6034",
+        "45.43.95.67:6816",
+        "91.198.95.56:5578",
+        "193.239.176.241:5647"
+    ]
 
     with sync_playwright() as p:
+        # ランダムにプロキシを選択
+        selected_proxy = random.choice(proxy_list)
+        proxy_url = f"http://{selected_proxy}"
+        print(f"使用するプロキシ: {proxy_url}")
+        
         browser = p.chromium.launch(
             headless=True,
-            args=['--no-sandbox', '--disable-blink-features=AutomationControlled']
+            args=[
+                '--no-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                f'--proxy-server={proxy_url}'
+            ],
+            proxy={
+                'server': proxy_url,
+                'username': 'vmqzsrah',
+                'password': 'urzk08fa06pc'
+            }
         )
         context = browser.new_context(
             user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

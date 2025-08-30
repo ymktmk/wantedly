@@ -93,6 +93,37 @@ class PostgreSQLCompanyDatabase:
             print(f"❌ データベース取得エラー: {e}")
             return []
     
+    def get_companies_without_description(self, limit: Optional[int] = None, offset: int = 0) -> List[Dict]:
+        """
+        descriptionが空の会社データを取得
+        """
+        if not self.connection:
+            raise Exception("データベースに接続されていません")
+        
+        try:
+            with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
+                query = """
+                    SELECT id, company_name, homepage_url, contact_url, description
+                    FROM companies
+                    WHERE description IS NULL
+                    ORDER BY RANDOM()
+                """
+                
+                if limit:
+                    query += f" LIMIT {limit}"
+                if offset:
+                    query += f" OFFSET {offset}"
+                
+                cursor.execute(query)
+                companies = cursor.fetchall()
+                
+                print(f"✅ descriptionが空の会社{len(companies)}件をデータベースから取得しました")
+                return [dict(company) for company in companies]
+                
+        except psycopg2.Error as e:
+            print(f"❌ データベース取得エラー: {e}")
+            return []
+
     def update_company_info(self, company_id: int, homepage_url: str = None, 
                            contact_url: str = None, description: str = None) -> bool:
         """

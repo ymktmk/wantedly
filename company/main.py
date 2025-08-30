@@ -9,7 +9,7 @@ from postgresql_database import create_postgresql_database_with_url
 def process_company(company_data, index, total, db):
     """個別の会社を処理してデータベースを更新する"""
     company_id = company_data['id']
-    company_name = company_data['company']
+    company_name = company_data['company_name']
     
     print(f"\n[{index}/{total}] 「{company_name}」(ID: {company_id})の情報:")
     print("=" * 50)
@@ -18,33 +18,33 @@ def process_company(company_data, index, total, db):
     update_data = {}
     
     # 公式ホームページ、お問い合わせページ、業界情報を取得
-    homepage_results = find_company_website(company_name)
-    time.sleep(random.uniform(0.5, 1))  # リクエスト間隔を開ける
-    contact_results = find_company_contact(company_name)
-    time.sleep(random.uniform(0.5, 1))  # リクエスト間隔を開ける
+    # homepage_results = find_company_website(company_name)
+    # time.sleep(random.uniform(0.5, 1))  # リクエスト間隔を開ける
+    # contact_results = find_company_contact(company_name)
+    # time.sleep(random.uniform(0.5, 1))  # リクエスト間隔を開ける
     industry_results = find_company_industry(company_name)
     
     # 公式ホームページの表示・保存
-    print("📱 公式ホームページ:")
-    if not homepage_results:
-        print("   見つかりませんでした。")
-    else:
-        result = homepage_results[0]
-        print(f"   {result['title']}")
-        print(f"   URL: {result['url']}")
-        print(f"   説明: {result['description']}")
-        update_data['homepage_url'] = result['url']
+    # print("📱 公式ホームページ:")
+    # if not homepage_results:
+    #     print("   見つかりませんでした。")
+    # else:
+    #     result = homepage_results[0]
+    #     print(f"   {result['title']}")
+    #     print(f"   URL: {result['url']}")
+    #     print(f"   説明: {result['description']}")
+    #     update_data['homepage_url'] = result['url']
     
-    # お問い合わせページの表示・保存
-    print("✉️  お問い合わせページ:")
-    if not contact_results:
-        print("   見つかりませんでした。")
-    else:
-        result = contact_results[0]
-        print(f"   {result['title']}")
-        print(f"   URL: {result['url']}")
-        print(f"   説明: {result['description']}")
-        update_data['contact_url'] = result['url']
+    # # お問い合わせページの表示・保存
+    # print("✉️  お問い合わせページ:")
+    # if not contact_results:
+    #     print("   見つかりませんでした。")
+    # else:
+    #     result = contact_results[0]
+    #     print(f"   {result['title']}")
+    #     print(f"   URL: {result['url']}")
+    #     print(f"   説明: {result['description']}")
+    #     update_data['contact_url'] = result['url']
     
     # 業界・事業内容の表示・保存
     print("🏢 業界・事業内容:")
@@ -89,8 +89,8 @@ if __name__ == "__main__":
 
         while True:
             # 1件だけ取得（毎回クエリ）
-            companies = db.get_companies_without_homepage(limit=1, offset=0)
-
+            # companies = db.get_companies_without_homepage(limit=1, offset=0)
+            companies = db.get_companies_without_description(limit=1, offset=0)
             if not companies:
                 if processed_count == 0:
                     print("処理対象の会社がありません。終了します。")
